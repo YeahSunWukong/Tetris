@@ -32,7 +32,8 @@ var isOver=false,
 var clientWidth,
 	clientHeight,
 	backLayer,
-	nestLayer,
+	gameLayer,
+	nextLayer,
 	scoreLayer,
 	levelLayer,
 	nextText,
@@ -51,7 +52,14 @@ Tetris.prototype.fresh = function(){
 	
 }
 function gameStart(){
-	alert('开始')
+	gameArea();
+}
+function gameArea(){
+	backLayer.removeAllChild();	
+	gameLayer = new LSprite();
+	gameLayer.graphics.drawRect(0,'#333333',[5,5,col*size+col+3,row*size+row+3],true,'#333333');
+	gameLayer.graphics.drawRect(0,'#cccccc',[6,6,col*size+col+1,row*size+row+1],true,'#cccccc');
+	backLayer.addChild(gameLayer);
 }
 function gameInit(){
 	var title = new LTextField();
