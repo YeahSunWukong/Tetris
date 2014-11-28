@@ -3,9 +3,10 @@
 <head>
 <meta charset="utf-8">
 <title>俄罗斯方块</title>
+<meta content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=0" name="viewport">
 <script src="js/lufylegend-1.9.1.min.js"></script>
 <style type="text/css">
-*{padding:0;margin:0;height:100%; overflow:hidden;}
+*{padding:0;margin:0;height:100%; background-color:#eeeeee;}
 #myTetris{height:100%;}
 </style>
 </head>
@@ -138,14 +139,14 @@ function gameInit(){
 }
 function main(){  
 	backLayer = new LSprite();
-	backLayer.graphics.drawRect(1,'#eeeeee',[0,0,clientWidth,clientHeight],true,'#eeeeee');
+	backLayer.graphics.drawRect(0,'#eeeeee',[0,0,clientWidth,clientHeight],true,'#eeeeee');
 	addChild(backLayer);
 	gameInit();
 }
 (function(){
 	clientWidth = document.getElementById('myTetris').offsetWidth;
 	clientHeight = document.getElementById('myTetris').offsetHeight;
-	init(50,"myTetris",clientWidth,clientHeight,main);
+	init(50,"myTetris",clientWidth,clientHeight-10,main);
 })();
 </script>
 </body>
