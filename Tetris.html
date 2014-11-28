@@ -36,7 +36,9 @@ var clientWidth,
 	nextLayer,
 	scoreLayer,
 	levelLayer,
-	nextText,
+	nextTextTitle,
+	scoreTextTitle,
+	levelTextTitle,
 	scoreText,
 	levelText;
 function Tetris(tp){
@@ -57,9 +59,61 @@ function gameStart(){
 function gameArea(){
 	backLayer.removeAllChild();	
 	gameLayer = new LSprite();
-	gameLayer.graphics.drawRect(0,'#333333',[5,5,col*size+col+3,row*size+row+3],true,'#333333');
-	gameLayer.graphics.drawRect(0,'#cccccc',[6,6,col*size+col+1,row*size+row+1],true,'#cccccc');
+	var gameWidth = col*size+col+3;
+	gameLayer.graphics.drawRect(0,'#333333',[5,5,gameWidth,row*size+row+3],true,'#333333');
+	gameLayer.graphics.drawRect(0,'#cccccc',[6,6,gameWidth-2,row*size+row+1],true,'#cccccc');
 	backLayer.addChild(gameLayer);
+	scoreLayer = new LSprite();
+	var rightWidth = clientWidth-gameWidth-15;
+	scoreLayer.graphics.drawRect(0,'#333333',[gameWidth+10,35,rightWidth,35],true,'#333333');
+	scoreLayer.graphics.drawRect(0,'#cccccc',[gameWidth+11,36,rightWidth-2,33],true,'#cccccc');
+	scoreTextTitle = new LTextField();
+	scoreTextTitle.text = '得分:';
+	scoreTextTitle.size = 12;
+	scoreTextTitle.color = '#333333';
+	scoreTextTitle.x = gameWidth+10;
+	scoreTextTitle.y = 14;
+	scoreTextTitle.weight = 'bold';
+	scoreLayer.addChild(scoreTextTitle);
+	scoreText = new LTextField();
+	scoreText.text = '0';
+	scoreText.size = 12;
+	scoreText.color = '#333333';
+	scoreText.x = gameWidth+15;
+	scoreText.y = 44;
+	scoreLayer.addChild(scoreText);
+	backLayer.addChild(scoreLayer);
+	levelLayer = new LSprite();
+	levelLayer.graphics.drawRect(0,'#333333',[gameWidth+10,95,rightWidth,35],true,'#333333');
+	levelLayer.graphics.drawRect(0,'#cccccc',[gameWidth+11,96,rightWidth-2,33],true,'#cccccc');
+	levelTextTitle = new LTextField();
+	levelTextTitle.text = '等级:';
+	levelTextTitle.size = 12;
+	levelTextTitle.color = '#333333';
+	levelTextTitle.x = gameWidth+10;
+	levelTextTitle.y = 74;
+	levelTextTitle.weight = 'bold';
+	levelLayer.addChild(levelTextTitle);
+	levelText = new LTextField();
+	levelText.text = '0';
+	levelText.size = 12;
+	levelText.color = '#333333';
+	levelText.x = gameWidth+15;
+	levelText.y = 104;
+	levelLayer.addChild(levelText);
+	backLayer.addChild(levelLayer);
+	nextLayer = new LSprite();
+	nextLayer.graphics.drawRect(0,'#333333',[gameWidth+10,155,rightWidth,rightWidth],true,'#333333');
+	nextLayer.graphics.drawRect(0,'#cccccc',[gameWidth+11,156,rightWidth-2,rightWidth-2],true,'#cccccc');
+	nextTextTitle = new LTextField();
+	nextTextTitle.text = '下个图形:';
+	nextTextTitle.size = 12;
+	nextTextTitle.color = '#333333';
+	nextTextTitle.x = gameWidth+10;
+	nextTextTitle.y = 134;
+	nextTextTitle.weight = 'bold';
+	nextLayer.addChild(nextTextTitle);
+	backLayer.addChild(nextLayer);
 }
 function gameInit(){
 	var title = new LTextField();
