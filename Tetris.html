@@ -6,8 +6,9 @@
 <meta content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=0" name="viewport">
 <script src="js/lufylegend-1.9.1.min.js"></script>
 <style type="text/css">
-*{padding:0;margin:0;height:100%; background-color:#eeeeee;}
-#myTetris{height:100%;}
+*{padding:0;margin:0;}
+html,body{background-color:#eeeeee; height:100%;}
+#myTetris{height:100%; overflow:hidden;}
 </style>
 </head>
 
@@ -17,7 +18,7 @@
 var isOver=false,
 	row=18,
 	col=10,
-	size=Math.ceil((document.body.clientWidth-35)/14),
+	size=Math.ceil((document.body.clientWidth-26)/14),
 	shapes=["0,1,1,1,2,1,3,1","1,0,1,1,1,2,1,3",
 		"1,0,1,1,1,2,2,2","0,2,1,2,2,2,2,1","2,3,2,2,2,1,1,1","3,1,2,1,1,1,1,2",
 		"2,0,2,1,2,2,1,2","0,1,1,1,2,1,2,2","1,3,1,2,1,1,2,1","3,2,2,2,1,2,1,1",
@@ -28,44 +29,245 @@ var isOver=false,
 	colors=['#af0000','#007900','#578eff','#707070'],
 	level=0,
 	levelTime=500,
-	score=0,
-	clock;
-var clientWidth,
-	clientHeight,
-	backLayer,
-	gameLayer,
-	nextLayer,
-	scoreLayer,
-	levelLayer,
-	nextTextTitle,
-	scoreTextTitle,
-	levelTextTitle,
-	scoreText,
-	levelText;
-function Tetris(tp){
+	score=0;
+var clientWidth,clientHeight,backLayer,gameLayer,nextLayer,scoreLayer,levelLayer,nextTextTitle,scoreTextTitle,levelTextTitle,scoreText,levelText;
+//控制相关
+var myKey = {
+	keyControl:null,
+	step:1,
+	stepindex:0,
+	isTouchDown:false,
+	touchX:0,
+	touchY:0,
+	touchMove:false
+};
+function Tetris(left,top,shape,color){
 	this.blocks = [1,1,1,1];
-	this.color = null;
+	this.color = color;
 	this.nextColor = null;
-	this.shape = null;
+	this.shape = shape;
 	this.nextShape = null;
-	this.left = null;
-	this.top = null;
+	this.left = left;
+	this.top = top;
+	this.fresh(left,top,shape,color);
 }
-Tetris.prototype.fresh = function(){
-	
+Tetris.prototype = {
+	fresh:function(left,top,shape,color){
+		//随机指定颜色  如果有初始化颜色则用初始化颜色，如果有指定下一个颜色，则用下一个颜色，否则随机生成
+		var rNum = Math.floor(Math.random() * 10 % 3);
+		this.color = color?color:(this.nextColor?this.nextColor:colors[rNum]);
+		rNum = Math.floor(Math.random() * 10 % 3);
+		this.nextColor = colors[rNum];
+		//初始位移值  这步很重要
+		this.left = (typeof(left)!='undefined')?left:3;
+		this.top = (typeof(top)!='undefined')?top:0;
+		//随机出现图形
+		this.shape = shape?shape:(this.nextShape?this.nextShape:shapes[Math.floor(Math.random()*19 - 0.000000001)].split(','));
+		this.nextShape = shapes[Math.floor(Math.random()*19 - 0.000000001)].split(',');
+		this.showNext();
+		//判断出现的时候是否会达成游戏结束条件，若达不到结束条件，显示方块
+		if(!this.check(this.left,this.top,this.shape)){
+			isOver = true;
+			window.clearTimeout(clock);
+			alert('Game Over!')
+		}else{
+			this.show();
+			this.showScore();
+			this.gameLevel();
+		}
+	},
+	show:function(){//清除上一状态 并显示最新状态
+		for(var i in this.blocks){
+			//计算方块坐标
+			var bleft = (this.shape[i*2]- -this.left)*size+7;
+			var btop = (this.shape[i*2+1]- -this.top)*size+7;
+			//重新绘制方块
+			gameLayer.graphics.drawRect(0,this.color,[bleft,btop,size-1,size-1],true,this.color);
+		}
+	},
+	showNext:function(){//绘制下一个要出现的方块
+		var gameWidth = col*size+8;
+		var rightWidth = 4*size+3;
+		nextLayer.graphics.drawRect(0,'#cccccc',[gameWidth+11,206,rightWidth-2,rightWidth-2],true,'#cccccc');
+		for(var i in this.blocks){
+			//计算方块坐标
+			var bleft = this.nextShape[i*2]*size +gameWidth+12;
+			var btop = this.nextShape[i*2+1]*size +207;
+			//重新绘制方块
+			nextLayer.graphics.drawRect(0,this.nextColor,[bleft,btop,size-1,size-1],true,this.nextColor);
+		}
+	},
+	showScore:function(){//显示得分
+		scoreText.text = score;
+	},
+	gameLevel:function(){
+		while(true){
+			if(score<=20){
+				break;
+			}
+			var tScore = 5*(level- -2)*(level-1)+20;
+			if(score>tScore && score<=(tScore+10*level+10)){
+				break;
+			}
+			level++;
+		}
+		levelTime = 500-level*50;
+		levelText.text = level;
+	},
+	hMove:function(num){//水平运动
+		if(this.check(this.left- -num,this.top,this.shape)){
+			this.clear();
+			this.left = this.left- -num;
+			this.show();
+		}
+	},
+	vMove:function(num){//垂直运动
+		if(this.check(this.left,this.top- -num,this.shape)){
+			this.clear();
+			this.top = this.top- -num;
+			this.show();
+		}else{
+			this.fixShape(this.left,this.top,this.shape);
+			this.findFull();
+			this.fresh();
+		}
+	},
+	rotate:function(){//改变方向
+		var newshape = [this.shape[1],3-this.shape[0],this.shape[3],3-this.shape[2],this.shape[5],3-this.shape[4],this.shape[7],3-this.shape[6]];
+		if(this.check(this.left,this.top,newshape)){
+			this.clear();
+			this.shape = newshape;
+			this.show();
+		}
+	},
+	clear:function(){//清除上一次画面
+		for(var i in this.blocks){
+			//计算方块坐标
+			var bleft = (this.shape[i*2]- -this.left)*size +7;
+			var btop = (this.shape[i*2+1]- -this.top)*size +7;
+			//重新绘制方块
+			gameLayer.graphics.drawRect(0,'#cccccc',[bleft,btop,size-1,size-1],true,'#cccccc');
+		}
+	},
+	check:function(left,top,shape){//碰撞检测 边界检测
+		var leftMost = col;			//记录最左边的方块坐标
+		var rightMost = 0;			//记录最右边的方块坐标
+		var bottomMost = 0;			//记录最下面的方块坐标
+		var flag = false;			//到达边界标志，为true则已经到了边界
+		for(var i=0;i<shape.length;i= i+2){
+			//记录最左边的方块坐标
+			if(shape[i] < leftMost){
+				leftMost = shape[i];
+			}
+			//记录最右边的方块坐标
+			if(shape[i] > rightMost){
+				rightMost = shape[i];
+			}
+			//记录最下面的方块坐标
+			if(shape[i+1] > bottomMost){
+				bottomMost = shape[i+1]
+			}
+			//检测是否到达边界
+			if(this[(shape[i+1]- -top)*100- -(shape[i]- -left)]){
+				flag = true;
+			}
+		}
+		//判断是否已经到达极限高度 （即：方块是否已经快堆到顶了）
+		for(var m=0;m<3;m++){
+			for(var n=0; n<col;n++){
+				if(this[m*100+n]){
+					flag = true;
+				}
+			}
+		}
+		//进行综合判断
+		if((leftMost- -left)<0 || (rightMost- -left+1)>col || (bottomMost- -top+1)>row || flag){
+			return false;
+		}
+		return true;
+	},
+	fixShape:function(left,top,shape){
+		var gray = new Tetris(left,top,shape,colors[3]);
+		for(var i=0;i<8;i+=2){
+			this[(shape[i+1]- -top)*100- -(shape[i]- -left)] = gray.blocks[i/2];
+		}
+	},
+	findFull:function(){//找到整行，并移除   同时计算得分
+		var lineNum = 0;
+		for(var m=0;m<row;m++){
+			var count = 0;
+			for(var n=0;n<col;n++){
+				if(this[m*100 +n]){
+					count++;
+				}
+			}
+			if(count == col){
+				this.removeLine(m);
+				lineNum++;
+			}
+		}
+		switch(lineNum){
+			case 1:
+				score += 1;
+				break;
+			case 2:
+				score += 3;
+				break;
+			case 3:
+				score += 5;
+				break;
+			case 4:
+				score += 7;
+				break;
+		}
+	},
+	removeLine:function(m){
+		gameLayer.graphics.drawRect(0,'#cccccc',[7,7+m*size,size*col,size-1],true,'#cccccc');
+		for(var i=m;i>=0;i--){
+			for(var j=0; j<col;j++){
+				this[i*100+j] = this[(i-1)*100+j];
+				if(this[i*100+j]){
+					gameLayer.graphics.drawRect(0,colors[3],[7+j*size,7+i*size,size-1,size-1],true,colors[3]);
+				}else{
+					gameLayer.graphics.drawRect(0,'#cccccc',[7+j*size,7+i*size,size-1,size-1],true,'#cccccc');
+				}
+			}
+		}
+	}
 }
 function gameStart(){
 	gameArea();
+	tetris = new Tetris();
+	document.onkeydown = function(e){
+		if(isOver) return;
+		var e = window.event?window.event:e;
+		switch(e.keyCode)
+		{
+			case 38:
+				tetris.rotate();
+				break;
+			case 40: //down
+				tetris.vMove(1);
+				break;
+			case 37: //left
+				tetris.hMove(-1);
+				break;
+			case 39: //right
+				tetris.hMove(1);
+				break;
+		}
+	}
+	clock = setInterval("if(!isOver) tetris.vMove(1)",levelTime);
 }
 function gameArea(){
 	backLayer.removeAllChild();	
 	gameLayer = new LSprite();
-	var gameWidth = col*size+col+3;
-	gameLayer.graphics.drawRect(0,'#333333',[5,5,gameWidth,row*size+row+3],true,'#333333');
-	gameLayer.graphics.drawRect(0,'#cccccc',[6,6,gameWidth-2,row*size+row+1],true,'#cccccc');
+	var gameWidth = col*size+8;
+	gameLayer.graphics.drawRect(0,'#333333',[5,5,gameWidth-5,row*size+3],true,'#333333');
+	gameLayer.graphics.drawRect(0,'#cccccc',[6,6,gameWidth-7,row*size+1],true,'#cccccc');
 	backLayer.addChild(gameLayer);
 	scoreLayer = new LSprite();
-	var rightWidth = clientWidth-gameWidth-15;
+	var rightWidth = 4*size+3;
 	scoreLayer.graphics.drawRect(0,'#333333',[gameWidth+10,45,rightWidth,40],true,'#333333');
 	scoreLayer.graphics.drawRect(0,'#cccccc',[gameWidth+11,46,rightWidth-2,38],true,'#cccccc');
 	scoreTextTitle = new LTextField();
@@ -134,7 +336,9 @@ function gameInit(){
 	backLayer.addChild(clickLayer);
 	clickLayer.addEventListener(LMouseEvent.MOUSE_UP,gameStart);
 }
-function main(){  
+function main(){
+	LGlobal.stageScale = LStageScaleMode.SHOW_ALL;
+    LSystem.screen(LStage.FULL_SCREEN);
 	backLayer = new LSprite();
 	backLayer.graphics.drawRect(0,'#eeeeee',[0,0,clientWidth,clientHeight],true,'#eeeeee');
 	addChild(backLayer);
@@ -143,7 +347,11 @@ function main(){
 (function(){
 	clientWidth = document.getElementById('myTetris').offsetWidth;
 	clientHeight = document.getElementById('myTetris').offsetHeight;
-	init(50,"myTetris",clientWidth,clientHeight-10,main);
+	var gameHeight = row*size+row+13;
+	if(gameHeight>clientHeight){
+		clientHeight = gameHeight;
+	}
+	init(500,"myTetris",clientWidth,clientHeight,main);
 })();
 </script>
 </body>
